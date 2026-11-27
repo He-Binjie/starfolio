@@ -15,41 +15,7 @@ Pop-Location
 
 Write-Host "=== 2/6 Ensure offline BGE Chinese embedding model (dereferenced, zero symlinks) ===" -ForegroundColor Cyan
 $RawModelCache = Join-Path $DistRoot "raw-models"
-New-Item -ItemType Directory -Force -Path $RawModelCache, $WinModels | Out-Null
-python -c @"
-import os, shutil
-from pathlib import Path
-from fastembed import TextEmbedding
-
-raw_cache = Path(r'$RawModelCache')
-out_root = Path(r'$WinModels')
-os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
-_ = TextEmbedding(model_name='BAAI/bge-small-zh-v1.5', cache_dir=str(raw_cache))
-
-for mdir in raw_cache.glob('models--*'):
-    if not mdir.is_dir():
-        continue
-    out_m = out_root / mdir.name
-    out_m.mkdir(parents=True, exist_ok=True)
-    for sub in ('refs', 'trees'):
-        if (mdir / sub).exists():
-            shutil.copytree(mdir / sub, out_m / sub, dirs_exist_ok=True)
-    for f in mdir.iterdir():
-        if f.is_file():
-            shutil.copy2(f, out_m / f.name)
-    snaps = mdir / 'snapshots'
-    if snaps.exists():
-        for rev in snaps.iterdir():
-            if not rev.is_dir():
-                continue
-            out_rev = out_m / 'snapshots' / rev.name
-            out_rev.mkdir(parents=True, exist_ok=True)
-            for item in rev.iterdir():
-                real_src = item.resolve()
-                if real_src.is_file():
-                    shutil.copy2(real_src, out_rev / item.name)
-print('Clean offline embedding model ready at', out_root)
-"@
+python (Join-Path $Root "windows-app\prepare_models.py") $RawModelCache $WinModels
 
 Write-Host "=== 3/6 Generate Windows .ico from icon.svg ===" -ForegroundColor Cyan
 python (Join-Path $Root "windows-app\make_ico.py")

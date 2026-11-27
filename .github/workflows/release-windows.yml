@@ -37,18 +37,20 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - name: Build React frontend
         working-directory: frontend
         shell: pwsh
         run: |
-          pnpm install
+          $PSNativeCommandUseErrorActionPreference = $true
+          pnpm install --frozen-lockfile
           pnpm build
 
       - name: Install Python backend & Windows packaging dependencies
         shell: pwsh
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
           pip install -r windows-app/requirements-win.txt
@@ -56,42 +58,8 @@ jobs:
       - name: Pre-download clean offline BGE Chinese embedding model
         shell: pwsh
         run: |
-          python -c @"
-          import os, shutil
-          from pathlib import Path
-          from fastembed import TextEmbedding
-
-          raw_cache = Path('dist/raw-models')
-          out_root = Path('dist/win-models')
-          raw_cache.mkdir(parents=True, exist_ok=True)
-          out_root.mkdir(parents=True, exist_ok=True)
-          os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
-          _ = TextEmbedding(model_name='BAAI/bge-small-zh-v1.5', cache_dir=str(raw_cache))
-
-          for mdir in raw_cache.glob('models--*'):
-              if not mdir.is_dir():
-                  continue
-              out_m = out_root / mdir.name
-              out_m.mkdir(parents=True, exist_ok=True)
-              for sub in ('refs', 'trees'):
-                  if (mdir / sub).exists():
-                      shutil.copytree(mdir / sub, out_m / sub, dirs_exist_ok=True)
-              for f in mdir.iterdir():
-                  if f.is_file():
-                      shutil.copy2(f, out_m / f.name)
-              snaps = mdir / 'snapshots'
-              if snaps.exists():
-                  for rev in snaps.iterdir():
-                      if not rev.is_dir():
-                          continue
-                      out_rev = out_m / 'snapshots' / rev.name
-                      out_rev.mkdir(parents=True, exist_ok=True)
-                      for item in rev.iterdir():
-                          real_src = item.resolve()
-                          if real_src.is_file():
-                              shutil.copy2(real_src, out_rev / item.name)
-          print('Prepared clean offline BGE model at', out_root)
-          "@
+          $PSNativeCommandUseErrorActionPreference = $true
+          python windows-app/prepare_models.py dist/raw-models dist/win-models
 
       - name: Generate Windows multi-res .ico
         shell: pwsh

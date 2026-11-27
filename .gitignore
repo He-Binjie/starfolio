@@ -1,0 +1,26 @@
+# Local runtime data & secrets (never commit)
+config.yaml
+data/
+logs/
+dist/
+*.db
+*.db-shm
+*.db-wal
+.env
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+.pnpm-store/
+
+# macOS / IDE
+.DS_Store
+.vscode/
+.idea/

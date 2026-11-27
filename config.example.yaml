@@ -1,0 +1,97 @@
+# 星海拾卷（Starfolio）示例配置文件
+# 默认以 standalone 模式运行时，软件会自动在 ~/Library/Application Support/KBConsole/config.yaml 生成并维护配置，
+# 通常无需手动编写本文件；如需自托管/自定义路径，可复制为 config.yaml 并修改。
+
+edition: "standalone"
+onboarding_completed: false
+
+server:
+  host: "127.0.0.1"
+  port: 18765
+
+paths:
+  data_dir: "./data"
+  db_path: "./data/kb_console.db"
+
+# 接入的本地资料源（严格只读；支持 kind: folder / wiki / files）
+sources:
+  - id: "my-notes"
+    name: "我的笔记库"
+    path: "~/Documents/Notes"
+    kind: "folder"
+    is_git: false
+    sensitivity: "personal"
+
+indexing:
+  allowed_extensions:
+    - ".md"
+    - ".txt"
+    - ".pdf"
+    - ".docx"
+    - ".pptx"
+    - ".xlsx"
+    - ".csv"
+    - ".html"
+    - ".htm"
+    - ".json"
+    - ".yaml"
+    - ".yml"
+  max_file_size_mb:
+    default: 30
+    ".pdf": 120
+    ".pptx": 120
+    ".xlsx": 250
+  xlsx_max_rows_per_sheet: 50
+  xlsx_max_chars: 200000
+  csv_max_rows: 100
+  pdf_max_pages: 300
+  chunk_max_chars: 1400
+  chunk_overlap_lines: 3
+  exclude_dir_names:
+    - ".git"
+    - "node_modules"
+    - "__pycache__"
+    - ".venv"
+    - "venv"
+    - "dist"
+    - "build"
+    - ".archive"
+  exclude_dir_suffixes:
+    - ".app"
+  exclude_paths: []
+  # 隐私硬排除：命中路径或文件名时自动跳过，绝不入库
+  exclude_keywords:
+    - "病历"
+    - "体检报告"
+    - "身份证"
+    - "银行卡"
+    - "密码"
+  poll_interval_seconds: 120
+
+embedding:
+  enabled: true
+  model_name: "BAAI/bge-small-zh-v1.5"
+  cache_dir: "./data/models"
+  batch_size: 32
+  threads: 4
+  idle_unload_seconds: 300
+  rrf_k: 60
+  max_text_chars: 1200
+
+qa:
+  default_engine: "openai-api"
+  default_top_k: 10
+  max_excerpt_chars: 900
+  # 可选：在软件右上角「设置」中填入自己的 OpenAI 兼容 API Key（仅存本机）
+  openai_api:
+    enabled: false
+    label: "自定义模型 API（OpenAI 兼容）"
+    base_url: "https://api.deepseek.com/v1"
+    api_key: ""
+    model: "deepseek-chat"
+  engines: []
+
+conflicts:
+  min_similarity: 0.80
+  max_candidates: 80
+  review_engine: "openai-api"

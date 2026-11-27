@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- macOS squircle deep twilight-indigo base (100% inside 64..960 bounds, PyMuPDF-safe) -->
+  <rect x="64" y="64" width="896" height="896" rx="205" fill="#0D162B"/>
+  <rect x="74" y="74" width="876" height="876" rx="196" fill="#121E3A"/>
+  <!-- Soft contained celestial dome (strictly inside squircle bounds: top = 420-310 = 110 > 74) -->
+  <circle cx="512" cy="420" r="310" fill="#1A2C54" opacity="0.52"/>
+  <circle cx="512" cy="390" r="210" fill="#21386B" opacity="0.42"/>
+  <!-- Crisp subtle inner rim -->
+  <rect x="68" y="68" width="888" height="888" rx="201" fill="none" stroke="#334155" stroke-width="6" opacity="0.7"/>
+
+  <!-- Subtle distant starfield dust -->
+  <circle cx="222" cy="242" r="6" fill="#93C5FD" opacity="0.48"/>
+  <circle cx="802" cy="228" r="7" fill="#93C5FD" opacity="0.45"/>
+  <circle cx="192" cy="412" r="5" fill="#CBD5E1" opacity="0.35"/>
+  <circle cx="836" cy="396" r="5.5" fill="#CBD5E1" opacity="0.35"/>
+  <circle cx="726" cy="176" r="4.5" fill="#FDE68A" opacity="0.55"/>
+  <circle cx="306" cy="176" r="5" fill="#BFDBFE" opacity="0.42"/>
+
+  <!-- Constellation arcs connecting scattered stars down into the open volume -->
+  <path d="M 294 344 L 414 268 L 512 316 L 622 246 L 734 334" fill="none" stroke="#60A5FA" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.78"/>
+  <path d="M 414 268 L 512 468 M 622 246 L 512 468 M 512 316 L 512 468" fill="none" stroke="#93C5FD" stroke-width="5" stroke-linecap="round" opacity="0.46"/>
+  <path d="M 294 344 L 372 486 M 734 334 L 652 486" fill="none" stroke="#60A5FA" stroke-width="4.5" stroke-linecap="round" opacity="0.36"/>
+
+  <!-- Constellation star nodes -->
+  <circle cx="294" cy="344" r="15" fill="#60A5FA" opacity="0.3"/>
+  <circle cx="294" cy="344" r="9" fill="#DBEAFE"/>
+
+  <circle cx="414" cy="268" r="19" fill="#60A5FA" opacity="0.32"/>
+  <circle cx="414" cy="268" r="11" fill="#EFF6FF"/>
+
+  <circle cx="622" cy="246" r="19" fill="#60A5FA" opacity="0.32"/>
+  <circle cx="622" cy="246" r="11" fill="#EFF6FF"/>
+
+  <circle cx="734" cy="334" r="15" fill="#60A5FA" opacity="0.3"/>
+  <circle cx="734" cy="334" r="9" fill="#DBEAFE"/>
+
+  <!-- Crisp Guiding Polaris 4-point warm gold star (clean luminous silhouette, no muddy halo) -->
+  <path d="M 512 232 Q 522 304 590 316 Q 522 328 512 400 Q 502 328 434 316 Q 502 304 512 232 Z" fill="#FBBF24"/>
+  <path d="M 512 262 Q 518 308 560 316 Q 518 324 512 370 Q 506 324 464 316 Q 506 308 512 262 Z" fill="#FEF08A"/>
+  <circle cx="512" cy="316" r="12" fill="#FFFFFF"/>
+
+  <!-- Tiny accent companion twinkle -->
+  <path d="M 678 198 Q 681 213 696 216 Q 681 219 678 234 Q 675 219 660 216 Q 675 213 678 198 Z" fill="#FDE68A" opacity="0.9"/>
+
+  <!-- Open Volume / Folio (拾卷) -->
+  <path d="M 218 532 C 310 494, 438 494, 512 538 C 586 494, 714 494, 806 532 L 806 790 C 714 752, 586 756, 512 800 C 438 756, 310 752, 218 790 Z" fill="#070C17" opacity="0.7"/>
+  <!-- Blue outer cover rim -->
+  <path d="M 206 510 C 306 474, 438 476, 512 522 C 586 476, 718 474, 818 510 L 818 774 C 718 736, 586 740, 512 786 C 438 740, 306 736, 206 774 Z" fill="#2563EB"/>
+
+  <!-- Left open page -->
+  <path d="M 226 490 C 322 458, 442 462, 512 510 L 512 762 C 442 716, 322 712, 226 746 Z" fill="#E2E8F0"/>
+  <!-- Right open page -->
+  <path d="M 512 510 C 582 462, 702 458, 798 490 L 798 746 C 702 712, 582 716, 512 762 Z" fill="#FFFFFF"/>
+  <!-- Spine shadow -->
+  <path d="M 505 506 L 512 510 L 512 762 L 505 757 Z" fill="#CBD5E1"/>
+
+  <!-- Editorial text bars on left page -->
+  <path d="M 274 544 C 336 526, 408 528, 464 550" fill="none" stroke="#94A3B8" stroke-width="14" stroke-linecap="round"/>
+  <path d="M 274 590 C 336 572, 408 574, 464 596" fill="none" stroke="#94A3B8" stroke-width="14" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 274 636 C 330 620, 392 622, 444 640" fill="none" stroke="#94A3B8" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- Editorial lines + verified amber citation highlight on right page -->
+  <path d="M 560 550 C 616 528, 688 526, 750 544" fill="none" stroke="#2563EB" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 560 596 C 616 574, 688 572, 750 590" fill="none" stroke="#F59E0B" stroke-width="19" stroke-linecap="round"/>
+  <path d="M 560 642 C 614 622, 678 620, 728 636" fill="none" stroke="#94A3B8" stroke-width="14" stroke-linecap="round" opacity="0.65"/>
+</svg>

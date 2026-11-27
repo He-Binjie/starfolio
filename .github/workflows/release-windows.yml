@@ -68,20 +68,22 @@ jobs:
       - name: Package Starfolio.exe (PyInstaller --onedir --windowed)
         shell: pwsh
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $root = (Get-Location).Path
           pyinstaller `
             --onedir `
             --windowed `
             --noconfirm `
             --clean `
             --name Starfolio `
-            --icon windows-app/starfolio.ico `
-            --distpath dist/win-app `
-            --workpath dist/pyi-win-work `
-            --specpath dist/pyi-win-work `
-            --paths backend `
-            --add-data "frontend/dist;frontend-dist" `
-            --add-data "dist/win-models;models" `
-            --add-data "macos-app/sample-kb;sample-kb" `
+            --icon "$root\windows-app\starfolio.ico" `
+            --distpath "$root\dist\win-app" `
+            --workpath "$root\dist\pyi-win-work" `
+            --specpath "$root\dist\pyi-win-work" `
+            --paths "$root\backend" `
+            --add-data "$root\frontend\dist;frontend-dist" `
+            --add-data "$root\dist\win-models;models" `
+            --add-data "$root\macos-app\sample-kb;sample-kb" `
             --hidden-import uvicorn.logging `
             --hidden-import uvicorn.loops `
             --hidden-import uvicorn.loops.auto `
@@ -110,19 +112,17 @@ jobs:
             --collect-all webview `
             --collect-all pythonnet `
             --collect-all clr_loader `
-            windows-app/starfolio_win.py
+            "$root\windows-app\starfolio_win.py"
 
       - name: Run clean-room E2E smoke test on compiled Starfolio.exe
         shell: pwsh
         run: |
-          $logFile = Join-Path $env:TEMP "starfolio-smoke.log"
+          $smokeLog = Join-Path $env:TEMP "starfolio-smoke-internal.log"
+          $env:STARFOLIO_SMOKE_LOG = $smokeLog
           $p = Start-Process -FilePath "dist/win-app/Starfolio/Starfolio.exe" `
             -ArgumentList "--smoke-test" `
-            -RedirectStandardOutput $logFile `
-            -RedirectStandardError "$logFile.err" `
             -Wait -PassThru
-          if (Test-Path $logFile) { Get-Content $logFile }
-          if (Test-Path "$logFile.err") { Get-Content "$logFile.err" }
+          if (Test-Path $smokeLog) { Get-Content $smokeLog -Encoding UTF8 }
           if ($p.ExitCode -ne 0) {
             throw "Starfolio.exe --smoke-test failed with exit code $($p.ExitCode)"
           }

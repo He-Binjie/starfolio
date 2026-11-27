@@ -146,6 +146,16 @@ def _http_json(base_url: str, path: str, method: str = "GET", payload: dict[str,
 
 def _run_smoke_test() -> int:
     """Clean-room E2E verification executed directly on the compiled Windows binary."""
+    smoke_log_env = os.environ.get("STARFOLIO_SMOKE_LOG", "").strip()
+    if smoke_log_env:
+        lp = Path(smoke_log_env)
+        lp.parent.mkdir(parents=True, exist_ok=True)
+        fh = open(lp, "w", encoding="utf-8", buffering=1)
+        sys.stdout = fh
+        sys.stderr = fh
+    elif sys.stdout is None or sys.stderr is None:
+        _configure_logging_streams(Path(tempfile.gettempdir()) / "starfolio_smoke_logs")
+
     tmp_root = Path(tempfile.mkdtemp(prefix="starfolio_win_smoke_"))
     data_dir = tmp_root / "data"
     loose_dir = tmp_root / "loose_docs"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -170,8 +171,11 @@ def get_project_detail(cfg: AppConfig, source_id: str, project: str) -> dict[str
                 ],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=10,
                 check=False,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
             for ln in proc.stdout.splitlines():
                 cols = ln.split("|", 4)

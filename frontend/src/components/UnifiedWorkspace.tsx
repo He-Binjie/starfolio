@@ -4,6 +4,7 @@ import {
   Button,
   Checkbox,
   Collapse,
+  Dropdown,
   Empty,
   Input,
   Modal,
@@ -23,7 +24,9 @@ import {
   CloseOutlined,
   CopyOutlined,
   DeleteOutlined,
+  FileAddOutlined,
   FilterOutlined,
+  FolderAddOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   RobotOutlined,
@@ -46,6 +49,7 @@ import { DocPreview } from './DocPreview';
 import { SidebarTree } from './SidebarTree';
 import { CompareTarget } from './CompareModal';
 import { FactMatrixModal } from './FactMatrixModal';
+import { isNativeMac, modKeyLabel, triggerPathPicker } from '../platform';
 
 interface UnifiedWorkspaceProps {
   meta: MetaResponse | null;
@@ -693,21 +697,51 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
                     value={treeFilter}
                     onChange={(e) => setTreeFilter(e.target.value)}
                   />
-                  <Tooltip title="纯本地只读拾取：可直接多选零散文件（PDF/Word/PPT/HTML/MD）或整个文件夹">
-                    <Button
-                      size="small"
-                      type="default"
-                      onClick={() => {
-                        if (window.__KB_NATIVE_MAC__ && window.webkit?.messageHandlers?.kbNative) {
-                          window.webkit.messageHandlers.kbNative.postMessage({ type: 'pickAny' });
-                        } else {
-                          onOpenSettings?.();
-                        }
+                  {isNativeMac() ? (
+                    <Tooltip title="纯本地只读拾取：可直接多选零散文件（PDF/Word/PPT/HTML/MD）或整个文件夹">
+                      <Button
+                        size="small"
+                        type="default"
+                        onClick={() => {
+                          triggerPathPicker('any');
+                        }}
+                      >
+                        + 拾取
+                      </Button>
+                    </Tooltip>
+                  ) : (
+                    <Dropdown
+                      trigger={['click']}
+                      menu={{
+                        items: [
+                          {
+                            key: 'files',
+                            icon: <FileAddOutlined />,
+                            label: '选择零散文件（可多选）',
+                            onClick: async () => {
+                              const st = await triggerPathPicker('files');
+                              if (st === 'fallback_manual') onOpenSettings?.();
+                            },
+                          },
+                          {
+                            key: 'folder',
+                            icon: <FolderAddOutlined />,
+                            label: '选择本地文件夹',
+                            onClick: async () => {
+                              const st = await triggerPathPicker('folder');
+                              if (st === 'fallback_manual') onOpenSettings?.();
+                            },
+                          },
+                        ],
                       }}
                     >
-                      + 拾取
-                    </Button>
-                  </Tooltip>
+                      <Tooltip title="纯本地只读拾取：可选零散文件（PDF/Word/PPT/HTML/MD）或整个文件夹">
+                        <Button size="small" type="default">
+                          + 拾取
+                        </Button>
+                      </Tooltip>
+                    </Dropdown>
+                  )}
                 </div>
               )}
             </div>
@@ -818,7 +852,7 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
               <SearchOutlined style={{ color: 'var(--text-muted)', fontSize: 13 }} />
               <input
                 className="omni-input"
-                placeholder="搜资料（↑↓ 浏览）或输入问题按 ⌘↵ 问 AI…"
+                placeholder={`搜资料（↑↓ 浏览）或输入问题按 ${modKeyLabel()}↵ 问 AI…`}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -853,7 +887,7 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
                   <CloseOutlined />
                 </button>
               )}
-              <Tooltip title="基于当前范围或勾选文档进行带出处问答（⌘↵）">
+              <Tooltip title={`基于当前范围或勾选文档进行带出处问答（${modKeyLabel()}↵）`}>
                 <button
                   type="button"
                   className="ask-ai-pill"

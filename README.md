@@ -2,10 +2,11 @@
   <img src="./macos-app/icon.svg" width="88" height="88" alt="星海拾卷 Starfolio Logo" />
   <h1>星海拾卷 · Starfolio</h1>
   <p><strong>文件不必硬整理，拾起来就能问。</strong></p>
-  <p>面向 macOS 的纯本地只读知识库工作台 · 0-Token 离线检索与跨文件分析 · BYOL 自带模型问答</p>
+  <p>面向 macOS & Windows 的纯本地只读知识库工作台 · 0-Token 离线检索与跨文件分析 · BYOL 自带模型问答</p>
 
   <p>
     <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%2014%2B-0f172a?style=flat-square" />
+    <img src="https://img.shields.io/badge/Windows-10%2F11%20x64-0284c7?style=flat-square" />
     <img src="https://img.shields.io/badge/Read--Only-Zero%20File%20Mutation-059669?style=flat-square" />
     <img src="https://img.shields.io/badge/Local%20AI-0%20Token%20Core-2563eb?style=flat-square" />
     <img src="https://img.shields.io/badge/License-MIT-d97706?style=flat-square" />
@@ -43,21 +44,40 @@
 
 ---
 
+## 直接下载桌面安装包（推荐）
+
+前往 [GitHub Releases](https://github.com/He-Binjie/starfolio/releases) 直接下载开箱即用安装包（均已内置离线中文语义模型，首次打开无需配环境）：
+
+- **Windows 10 / 11 (x64)**：
+  - **安装版（推荐）**：`Starfolio-Windows-x64-v1.8-Setup.exe`（默认安装到用户目录，无需管理员权限）
+  - **便携版**：`Starfolio-Windows-x64-v1.8-Portable.zip`（解压后双击 `Starfolio.exe` 直接运行）
+- **macOS (Apple Silicon 14+)**：`星海拾卷-AppleSilicon-v1.8.dmg`（拖入 Applications 即可）
+
+> Windows 桌面版基于 Windows 10/11 系统自带的 Edge WebView2（`pywebview`），无需 Electron 庞大运行时，支持原生多选文件/文件夹弹窗、资源管理器拖拽接入与本地只读索引。
+
+---
+
 ## 快速开始（从源码本地运行）
 
 ### 环境要求
-- macOS 14.0+（Apple Silicon 推荐；Python/React 后端前端同样支持通用 macOS / Linux 开发运行）
-- Python 3.11+（推荐 3.12 / 3.13）
+- macOS 14.0+ / Windows 10/11 (x64) / Linux
+- Python 3.11+（推荐 3.12）
 - Node.js 18+ & `pnpm`（或 `npm`）
 
 ### 1. 启动后端（FastAPI + SQLite FTS5 + FastEmbed 本地向量）
 
 ```bash
 python3 -m venv .venv
+# macOS / Linux:
 source .venv/bin/activate
+# Windows PowerShell:
+# .venv\Scripts\Activate.ps1
+
 pip install -r backend/requirements.txt
 
-# 默认以 standalone 模式启动（自动创建 ~/Library/Application Support/KBConsole/config.yaml 与示例库引导）
+# 默认以 standalone 模式启动：
+# - macOS 自动创建 ~/Library/Application Support/KBConsole/config.yaml
+# - Windows 自动创建 %LOCALAPPDATA%\Starfolio\config.yaml
 python backend/run.py
 ```
 
@@ -73,13 +93,24 @@ pnpm dev
 
 浏览器打开 `http://127.0.0.1:5173`（或先 `pnpm build` 后直接访问后端 `http://127.0.0.1:18765`）。首次访问会弹出「3 步快速上手引导」，可一键载入内置示例知识库体验全部功能。
 
-### 3. 打包原生 macOS Apple Silicon 独立版 `.app` / `.dmg`（可选）
+### 3. 打包原生桌面安装包（macOS / Windows）
+
+- **打包 macOS Apple Silicon 独立版 `.app` / `.dmg`**：
 
 ```bash
 bash macos-app/build-standalone.sh
 ```
 
 脚本会自动编译前端、使用 PyInstaller 打包 Python 后端、编译 Swift 原生壳（支持 `⌥Space` 全局呼出、菜单栏驻留、原生多选文件/文件夹弹窗与 Finder 拖放）、嵌入离线中文向量模型并生成 `dist/星海拾卷-AppleSilicon-v1.8.dmg`。
+
+- **打包 Windows x64 独立版 `Setup.exe` / `Portable.zip`**：
+
+```powershell
+pip install -r backend/requirements.txt -r windows-app/requirements-win.txt
+.\windows-app\build-windows.ps1
+```
+
+脚本会自动编译前端、嵌入离线中文向量模型、生成多分辨率 `.ico`、使用 PyInstaller 打包 `Starfolio.exe`（Edge WebView2 原生窗口）、执行洁净端到端自检（`--smoke-test`），并生成 `dist\Starfolio-Windows-x64-v1.8-Portable.zip` 与（若安装了 Inno Setup 6）`dist\Starfolio-Windows-x64-v1.8-Setup.exe`。本仓库亦配置了 GitHub Actions（`.github/workflows/release-windows.yml`）支持在云端 `windows-latest` 自动构建与实测发版。
 
 ---
 
@@ -127,10 +158,18 @@ starfolio/
 │           ├── CommandPalette.tsx   # ⌘K 极速跳转面板
 │           └── SidebarTree.tsx      # 左侧目录树
 ├── macos-app/
-│   ├── main-standalone.swift       # Swift 原生外壳（WKWebView + ⌥Space + NSOpenPanel + 拖放）
-│   ├── build-standalone.sh         # 一键编译签名与 DMG 打包脚本
+│   ├── main-standalone.swift       # macOS Swift 原生外壳（WKWebView + ⌥Space + NSOpenPanel + 拖放）
+│   ├── build-standalone.sh         # macOS 一键编译签名与 DMG 打包脚本
 │   ├── icon.svg                    # 品牌矢量图标
 │   └── sample-kb/                  # 内置 3 份脱敏演示文档（预置口径冲突便于 10 秒体验）
+├── windows-app/
+│   ├── starfolio_win.py            # Windows Edge WebView2 原生外壳（pywebview + 文件/目录选择 + 拖放 + E2E 自检）
+│   ├── make_ico.py                 # 从 icon.svg 生成多分辨率 Windows .ico
+│   ├── installer.iss               # Inno Setup 6 免管理员一键安装脚本
+│   ├── build-windows.ps1           # Windows 本地一键编译与打包脚本
+│   └── requirements-win.txt        # Windows 打包依赖
+├── .github/workflows/
+│   └── release-windows.yml         # GitHub Actions 云端自动构建、实测与 Release 发布流水线
 ├── docs/
 │   └── ARCHITECTURE_AND_PROMPTS.md # 架构全景、0-Token 算法与核心防幻觉 Prompt 约束详解
 ├── config.example.yaml             # 示例配置模板

@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import { marked } from 'marked';
 import { api, CollectionItem, DocumentDetail, DocumentLineageResponse, RelatedDocItem } from '../api';
+import { fileManagerName, isWindowsPlatform, modKeyLabel } from '../platform';
 
 interface DocPreviewProps {
   sourceId: string | null;
@@ -481,17 +482,19 @@ export const DocPreview: React.FC<DocPreviewProps> = ({
                 color: 'var(--text-muted)',
               }}
             >
+              {!isWindowsPlatform() && (
+                <span>
+                  <Typography.Text code>⌥Space</Typography.Text> 随时呼出
+                </span>
+              )}
               <span>
-                <Typography.Text code>⌥Space</Typography.Text> 随时呼出
-              </span>
-              <span>
-                <Typography.Text code>⌘K</Typography.Text> 极速跳转
+                <Typography.Text code>{modKeyLabel()}K</Typography.Text> 极速跳转
               </span>
               <span>
                 <Typography.Text code>↑ ↓</Typography.Text> 步进预览
               </span>
               <span>
-                <Typography.Text code>⌘F</Typography.Text> 文档内查找
+                <Typography.Text code>{modKeyLabel()}F</Typography.Text> 文档内查找
               </span>
             </div>
           </div>
@@ -553,7 +556,7 @@ export const DocPreview: React.FC<DocPreviewProps> = ({
                     { label: detail.is_text ? '源码' : '文本', value: 'source' },
                   ]}
                 />
-                <Tooltip title="页内查找 (⌘F)">
+                <Tooltip title={`页内查找 (${modKeyLabel()}F)`}>
                   <Button
                     size="small"
                     type="text"
@@ -593,7 +596,7 @@ export const DocPreview: React.FC<DocPreviewProps> = ({
                 <Tooltip title="复制原文路径（含命中行号）">
                   <Button size="small" type="text" icon={<CopyOutlined />} onClick={copyCitation} />
                 </Tooltip>
-                <Tooltip title="在 Finder 中显示">
+                <Tooltip title={`在${fileManagerName()}中显示`}>
                   <Button size="small" type="text" icon={<FolderOpenOutlined />} onClick={() => handleOpen('finder')} />
                 </Tooltip>
                 <Tooltip title="用默认应用打开">

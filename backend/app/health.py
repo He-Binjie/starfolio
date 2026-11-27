@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -26,8 +27,11 @@ def _git_uncommitted(repo_path: Path) -> list[dict[str, str]]:
             ["git", "-c", "core.quotepath=false", "-C", str(repo_path), "status", "--porcelain"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
             check=False,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
     except Exception:
         return []

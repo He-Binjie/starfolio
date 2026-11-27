@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -146,8 +147,9 @@ class AppConfig:
         src = self.source_by_id(source_id)
         if not src:
             return None
+        norm_rel = rel_path.replace("\\", "/")
         if src.kind == "files":
-            target = src.file_map().get(rel_path)
+            target = src.file_map().get(norm_rel)
             if not target:
                 return None
             try:
@@ -159,7 +161,7 @@ class AppConfig:
             if self.is_path_excluded(candidate):
                 return None
             return candidate
-        candidate = (src.path / rel_path).resolve()
+        candidate = (src.path / norm_rel).resolve()
         root = src.path.resolve()
         try:
             candidate.relative_to(root)
@@ -268,13 +270,23 @@ def _default_standalone_raw(data_dir: Path, port: int, bundled_models: Path | No
     }
 
 
+def _default_user_data_dir() -> Path:
+    if sys.platform == "win32":
+        local_app_data = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        return Path(local_app_data) / "Starfolio"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "KBConsole"
+    xdg_data = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    return Path(xdg_data) / "starfolio"
+
+
 def _resolve_config_path(path: Path | None = None) -> tuple[Path, str]:
     edition = os.environ.get("KB_CONSOLE_EDITION", "standalone").strip().lower()
     if os.environ.get("KB_CONSOLE_CONFIG"):
         return Path(os.environ["KB_CONSOLE_CONFIG"]).expanduser(), edition
     if edition == "standalone":
         data_dir = Path(
-            os.environ.get("KB_CONSOLE_DATA_DIR", str(Path.home() / "Library" / "Application Support" / "KBConsole"))
+            os.environ.get("KB_CONSOLE_DATA_DIR", str(_default_user_data_dir()))
         ).expanduser()
         data_dir.mkdir(parents=True, exist_ok=True)
         return data_dir / "config.yaml", "standalone"

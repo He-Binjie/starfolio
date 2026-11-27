@@ -22,6 +22,7 @@ import {
   SaveOutlined,
 } from '@ant-design/icons';
 import { api, SettingsResponse } from '../api';
+import { fileManagerName, isWindowsPlatform, triggerPathPicker } from '../platform';
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -67,7 +68,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const [keywordsText, setKeywordsText] = useState('');
   const [savingKw, setSavingKw] = useState(false);
 
-  const isNative = Boolean(window.__KB_NATIVE_MAC__);
+  const isWin = isWindowsPlatform();
+  const fmName = fileManagerName();
 
   const loadSettings = () => {
     api
@@ -127,11 +129,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     };
   }, [open, onDataChanged]);
 
-  const handlePickNative = (mode: 'any' | 'files' | 'folder') => {
-    if (isNative && window.webkit?.messageHandlers?.kbNative) {
-      const type = mode === 'files' ? 'pickFiles' : mode === 'folder' ? 'pickFolder' : 'pickAny';
-      window.webkit.messageHandlers.kbNative.postMessage({ type });
-    } else {
+  const handlePickNative = async (mode: 'any' | 'files' | 'folder') => {
+    const status = await triggerPathPicker(mode);
+    if (status === 'fallback_manual') {
       setShowManual(true);
     }
   };
@@ -286,7 +286,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <Space.Compact style={{ width: '100%', marginBottom: 10 }}>
             <Input
               size="small"
-              placeholder="输入本机文件或文件夹路径，如 ~/Downloads/方案.pdf 或 ~/Documents/Notes"
+              placeholder={
+                isWin
+                  ? '输入本机文件或文件夹路径，如 C:\\Users\\你的名字\\Downloads\\方案.pdf'
+                  : '输入本机文件或文件夹路径，如 ~/Downloads/方案.pdf 或 ~/Documents/Notes'
+              }
               value={manualPath}
               onChange={(e) => setManualPath(e.target.value)}
               onPressEnter={handleAddManual}
@@ -342,7 +346,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 {s.kind === 'files' && s.files && s.files.length > 0 && (
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {s.files.map((fp) => {
-                      const base = fp.split('/').pop() || fp;
+                      const base = fp.split(/[/\\]/).pop() || fp;
                       return (
                         <div
                           key={fp}
@@ -382,7 +386,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             type="warning"
             showIcon
             message="暂未接入任何文件或文件夹"
-            description="点击上方「选文件(多选)」直接挑选几份 PDF/Word/PPT/Markdown，或点「选文件夹」整夹同步，也可以直接从访达拖进窗口。"
+            description={`点击上方「选文件(多选)」直接挑选几份 PDF/Word/PPT/Markdown，或点「选文件夹」整夹同步，也可以直接从${fmName}拖进窗口。`}
           />
         )}
       </div>

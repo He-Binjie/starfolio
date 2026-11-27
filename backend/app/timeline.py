@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -149,8 +150,11 @@ def _load_live_git_events(cfg: AppConfig, per_repo: int = 80) -> list[dict[str, 
                 ],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=15,
                 check=False,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
         except Exception:
             continue
@@ -307,8 +311,11 @@ def get_commit_diff(cfg: AppConfig, source_id: str, commit_hash: str) -> dict[st
             ],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=15,
             check=False,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
     except Exception as exc:
         return {"commit": commit_hash, "source_id": source_id, "diff": f"读取 diff 失败：{exc}", "truncated": False}

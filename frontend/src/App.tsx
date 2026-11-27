@@ -23,15 +23,22 @@ import { HealthView } from './components/HealthView';
 import { OnboardingModal } from './components/OnboardingModal';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { CompareModal, CompareTarget } from './components/CompareModal';
+import { isWindowsPlatform, modKeyLabel } from './platform';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
 declare global {
   interface Window {
     __KB_NATIVE_MAC__?: boolean;
+    __KB_NATIVE_WIN__?: boolean;
     __kbOpenCmdK?: () => void;
     __kbSetTheme?: (pref: ThemePref) => void;
     __kbTriggerSync?: () => void;
+    pywebview?: {
+      api?: {
+        pick_paths?: (mode: 'files' | 'folder') => Promise<string[]>;
+      };
+    };
     webkit?: {
       messageHandlers?: {
         kbNative?: {
@@ -57,6 +64,9 @@ export const App: React.FC = () => {
   const [guideOpen, setGuideOpen] = useState(false);
   const [autoGuideShown, setAutoGuideShown] = useState(false);
   const [isNativeMac, setIsNativeMac] = useState<boolean>(Boolean(window.__KB_NATIVE_MAC__));
+  const [isNativeWin, setIsNativeWin] = useState<boolean>(Boolean(window.__KB_NATIVE_WIN__));
+  const isWin = isNativeWin || isWindowsPlatform();
+  const modKey = modKeyLabel();
 
   const [themePref, setThemePref] = useState<ThemePref>(() => {
     const saved = localStorage.getItem('kb_theme_pref');
@@ -98,8 +108,14 @@ export const App: React.FC = () => {
   }, [themePref, resolvedDark]);
 
   useEffect(() => {
-    // Detect late native flag injection
+    // Detect late native flag injection (macOS WKWebView or Windows pywebview)
     if (window.__KB_NATIVE_MAC__) setIsNativeMac(true);
+    if (window.__KB_NATIVE_WIN__) setIsNativeWin(true);
+    const onNativeReady = () => {
+      if (window.__KB_NATIVE_MAC__) setIsNativeMac(true);
+      if (window.__KB_NATIVE_WIN__) setIsNativeWin(true);
+    };
+    window.addEventListener('kb-native-ready', onNativeReady);
     window.__kbOpenCmdK = () => setCmdkOpen(true);
     window.__kbSetTheme = (pref: ThemePref) => setThemePref(pref);
     window.__kbTriggerSync = () => handleRefreshIndex();
@@ -184,6 +200,7 @@ export const App: React.FC = () => {
       });
     };
     return () => {
+      window.removeEventListener('kb-native-ready', onNativeReady);
       delete window.__kbOpenCmdK;
       delete window.__kbSetTheme;
       delete window.__kbTriggerSync;
@@ -297,7 +314,7 @@ export const App: React.FC = () => {
         colorBorderSecondary: resolvedDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
         borderRadius: 7,
         fontFamily:
-          "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', sans-serif",
+          "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei UI', 'Hiragino Sans GB', sans-serif",
         fontSize: 13,
       },
     }),
@@ -360,7 +377,7 @@ export const App: React.FC = () => {
             <button type="button" className="cmdk-trigger" onClick={() => setCmdkOpen(true)}>
               <SearchOutlined />
               <span>跳转…</span>
-              <span className="cmdk-kbd">⌘K</span>
+              <span className="cmdk-kbd">{modKey}K</span>
             </button>
             <Tooltip title={`外观主题：${themeLabel}（点击切换 自动 / 深色 / 浅色）`}>
               <button type="button" className="icon-pill-btn" onClick={cycleTheme}>
@@ -386,7 +403,7 @@ export const App: React.FC = () => {
                 <span>引导</span>
               </button>
             </Tooltip>
-            <Tooltip title="管理本地文件夹、AI 模型接口与隐私排除规则（⌘,）">
+            <Tooltip title={`管理本地文件夹、AI 模型接口与隐私排除规则（${modKey},）`}>
               <button type="button" className="icon-pill-btn" onClick={() => setSettingsOpen(true)}>
                 <SettingOutlined />
                 <span>设置</span>
@@ -444,7 +461,13 @@ export const App: React.FC = () => {
             )}
           </div>
           <div className="statusbar-group">
-            <span>{isNativeMac ? '⌥Space 全局呼出 · ⌘, 设置' : '本机只读服务'}</span>
+            <span>
+              {isNativeMac
+                ? '⌥Space 全局呼出 · ⌘, 设置'
+                : isWin
+                  ? 'Ctrl+K 跳转 · Ctrl+, 设置'
+                  : '本机只读服务'}
+            </span>
             <span>{meta?.watcher_active ? '实时监听' : '轮询'}</span>
           </div>
         </footer>

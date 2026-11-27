@@ -141,6 +141,7 @@ export interface ConflictCandidate {
 export interface MetaResponse {
   name: string;
   version: string;
+  platform?: string;
   edition?: 'personal' | 'standalone';
   onboarding_completed?: boolean;
   is_first_run?: boolean;
@@ -647,6 +648,14 @@ export const api = {
       body: JSON.stringify({ source_id, rel_path, mode }),
     });
     return res.json();
+  },
+  systemPickPaths: async (mode: 'files' | 'folder') => {
+    const res = await fetch('/api/system/pick-paths', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    });
+    return res.json() as Promise<{ ok: boolean; paths: string[]; error?: string }>;
   },
   projectsOverview: () => getJson<ProjectOverviewItem[]>('/api/projects/overview'),
   projectDetail: (source_id: string, project: string) =>

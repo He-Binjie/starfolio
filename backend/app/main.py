@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -166,6 +167,7 @@ def api_meta() -> dict[str, Any]:
     return {
         "name": "kb-console",
         "version": "1.8.0",
+        "platform": sys.platform,
         "edition": cfg.edition,
         "onboarding_completed": cfg.onboarding_completed,
         "is_first_run": cfg.edition == "standalone" and not cfg.onboarding_completed and len(cfg.sources) == 0,
@@ -281,6 +283,21 @@ def api_open_external(req: OpenExternalReq) -> dict[str, Any]:
     if not safe or not safe.exists():
         raise HTTPException(status_code=404, detail="文件路径不在允许范围内或不存在")
 
+    if sys.platform == "win32":
+        try:
+            if req.mode == "finder":
+                subprocess.Popen(f'explorer.exe /select,"{safe}"')
+            else:
+                os.startfile(str(safe))  # type: ignore[attr-defined]
+            return {"ok": True, "error": ""}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
+    if sys.platform != "darwin":
+        target = str(safe.parent if req.mode == "finder" else safe)
+        proc = subprocess.run(["xdg-open", target], capture_output=True, text=True, timeout=5, check=False)
+        return {"ok": proc.returncode == 0, "error": proc.stderr.strip()}
+
     if req.mode == "finder":
         cmd = ["open", "-R", str(safe)]
     elif req.mode == "typora":
@@ -292,6 +309,49 @@ def api_open_external(req: OpenExternalReq) -> dict[str, Any]:
     if proc.returncode != 0 and req.mode == "typora":
         proc = subprocess.run(["open", str(safe)], capture_output=True, text=True, timeout=5, check=False)
     return {"ok": proc.returncode == 0, "error": proc.stderr.strip()}
+
+
+class SystemPickPathsReq(BaseModel):
+    mode: str = "files"  # files | folder
+
+
+@app.post("/api/system/pick-paths")
+def api_system_pick_paths(req: SystemPickPathsReq) -> dict[str, Any]:
+    """Optional desktop fallback file/folder picker when running in a local browser."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+    except Exception:
+        return {"ok": False, "paths": [], "error": "当前环境不支持本地系统文件选择器，请直接粘贴路径。"}
+
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            root.attributes("-topmost", True)
+        except Exception:
+            pass
+        picked: list[str] = []
+        if req.mode == "folder":
+            folder = filedialog.askdirectory(title="选择要接入「星海拾卷」的本地文件夹（纯本地只读）")
+            if folder:
+                picked = [str(Path(folder))]
+        else:
+            files = filedialog.askopenfilenames(
+                title="选择要接入「星海拾卷」的本地文件（可多选 · 纯本地只读）",
+                filetypes=[
+                    (
+                        "支持文档",
+                        "*.md *.txt *.pdf *.docx *.pptx *.xlsx *.csv *.html *.htm *.json *.yaml *.yml",
+                    ),
+                    ("所有文件", "*.*"),
+                ],
+            )
+            picked = [str(Path(f)) for f in (files or []) if f]
+        root.destroy()
+        return {"ok": True, "paths": picked, "error": ""}
+    except Exception as exc:
+        return {"ok": False, "paths": [], "error": str(exc)}
 
 
 @app.get("/api/projects/overview")

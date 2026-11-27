@@ -12,6 +12,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { api, SettingsResponse } from '../api';
+import { fileManagerName, isNativeMac, isWindowsPlatform, modKeyLabel, triggerPathPicker } from '../platform';
 
 interface OnboardingModalProps {
   open: boolean;
@@ -57,7 +58,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     error?: string;
   } | null>(null);
 
-  const isNative = Boolean(window.__KB_NATIVE_MAC__);
+  const nativeMac = isNativeMac();
+  const isWin = isWindowsPlatform();
+  const modKey = modKeyLabel();
+  const fmName = fileManagerName();
 
   const loadSettings = () => {
     api
@@ -116,11 +120,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     };
   }, [open, onDataChanged]);
 
-  const handlePickNative = (mode: 'any' | 'files' | 'folder') => {
-    if (isNative && window.webkit?.messageHandlers?.kbNative) {
-      const type = mode === 'files' ? 'pickFiles' : mode === 'folder' ? 'pickFolder' : 'pickAny';
-      window.webkit.messageHandlers.kbNative.postMessage({ type });
-    } else {
+  const handlePickNative = async (mode: 'any' | 'files' | 'folder') => {
+    const status = await triggerPathPicker(mode);
+    if (status === 'fallback_manual') {
       setShowManual(true);
     }
   };
@@ -288,25 +290,50 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 直接选你电脑里的文件或文件夹
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 10 }}>
-                支持多选单个文档（如 PDF / Word / PPT / MD），或选中整个目录自动同步；也支持直接从访达拖进窗口。
+                支持多选单个文档（如 PDF / Word / PPT / MD），或选中整个目录自动同步；也支持直接从{fmName}拖进窗口。
               </div>
-              <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                <Button
-                  block
-                  loading={addingFolder}
-                  icon={<FileAddOutlined />}
-                  onClick={() => handlePickNative('any')}
-                >
-                  选择本地文件或文件夹（可多选）…
-                </Button>
-              </Space>
+              {nativeMac ? (
+                <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                  <Button
+                    block
+                    loading={addingFolder}
+                    icon={<FileAddOutlined />}
+                    onClick={() => handlePickNative('any')}
+                  >
+                    选择本地文件或文件夹（可多选）…
+                  </Button>
+                </Space>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <Button
+                    block
+                    loading={addingFolder}
+                    icon={<FileAddOutlined />}
+                    onClick={() => handlePickNative('files')}
+                  >
+                    选零散文件(多选)
+                  </Button>
+                  <Button
+                    block
+                    loading={addingFolder}
+                    icon={<FolderAddOutlined />}
+                    onClick={() => handlePickNative('folder')}
+                  >
+                    选文件夹
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
           {showManual && (
             <Space.Compact style={{ width: '100%', marginBottom: 14 }}>
               <Input
-                placeholder="输入本机文件或文件夹路径，例如 ~/Downloads/方案.pdf 或 ~/Documents/我的文档"
+                placeholder={
+                  isWin
+                    ? '输入本机文件或文件夹路径，例如 C:\\Users\\你的名字\\Documents\\方案.pdf'
+                    : '输入本机文件或文件夹路径，例如 ~/Downloads/方案.pdf 或 ~/Documents/我的文档'
+                }
                 value={manualPath}
                 onChange={(e) => setManualPath(e.target.value)}
                 onPressEnter={handleManualAdd}
@@ -491,14 +518,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 4. 高频快捷键速查
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                {!isWin && (
+                  <div>
+                    <Typography.Text code>⌥ Space</Typography.Text> 全局随时呼出 / 隐藏窗口
+                  </div>
+                )}
                 <div>
-                  <Typography.Text code>⌥ Space</Typography.Text> 全局随时呼出 / 隐藏窗口
+                  <Typography.Text code>{modKey}K</Typography.Text> 快速跳文档 ·{' '}
+                  <Typography.Text code>{modKey}F</Typography.Text> 文档内查找 ·{' '}
+                  <Typography.Text code>{modKey},</Typography.Text> 打开设置
                 </div>
-                <div>
-                  <Typography.Text code>⌘ K</Typography.Text> 快速跳文档 ·{' '}
-                  <Typography.Text code>⌘ F</Typography.Text> 文档内查找 ·{' '}
-                  <Typography.Text code>⌘ ,</Typography.Text> 打开设置
-                </div>
+                {isWin && (
+                  <div>
+                    <Typography.Text code>Ctrl+Enter</Typography.Text> 在搜索框直接向 AI 提问
+                  </div>
+                )}
               </div>
             </div>
           </div>

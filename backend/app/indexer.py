@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import subprocess
+import sys
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -84,8 +85,11 @@ def _load_git_file_meta(repo_path: Path) -> dict[str, tuple[str, str, str]]:
             ],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=25,
             check=False,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
     except Exception:
         return meta
@@ -262,7 +266,7 @@ class IndexerService:
                                 continue
                             if self.cfg.is_path_excluded(fpath):
                                 continue
-                            candidate_files.append((str(fpath.relative_to(src.path)), fpath))
+                            candidate_files.append((fpath.relative_to(src.path).as_posix(), fpath))
 
                 for rel_path, fpath in candidate_files:
                     ext = fpath.suffix.lower()

@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from datetime import datetime, timezone
@@ -19,7 +20,11 @@ from .vectors import VectorService
 _CITE_RE = re.compile(r"\[(\d+(?:\s*[,，]\s*\d+)*)\]")
 _NUM_RE = re.compile(r"(?<![A-Za-z0-9#])(\d+(?:\.\d+)?%?(?:天|个月|周|小时|元|万|亿|%|倍)?)(?![A-Za-z0-9])")
 _HOME_STR = str(Path.home())
-_EXTRA_PATH = f"{_HOME_STR}/bin:{_HOME_STR}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+_EXTRA_PATH = (
+    os.pathsep.join([f"{_HOME_STR}\\.local\\bin", f"{_HOME_STR}\\AppData\\Roaming\\npm"])
+    if sys.platform == "win32"
+    else f"{_HOME_STR}/bin:{_HOME_STR}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+)
 
 
 def _now_iso() -> str:
@@ -29,7 +34,7 @@ def _now_iso() -> str:
 def _cli_env() -> dict[str, str]:
     env = dict(os.environ)
     cur = env.get("PATH", "")
-    env["PATH"] = f"{_EXTRA_PATH}:{cur}" if cur else _EXTRA_PATH
+    env["PATH"] = f"{_EXTRA_PATH}{os.pathsep}{cur}" if cur else _EXTRA_PATH
     env.setdefault("HOME", str(Path.home()))
     return env
 
@@ -159,8 +164,9 @@ def run_cli_prompt(
         return "", f"未找到本机 CLI `{engine.provider}`，请确认已安装并在 PATH 中。"
 
     env = _cli_env()
-    work_dir = Path("/tmp/kb-console-qa-cwd")
+    work_dir = Path(tempfile.gettempdir()) / "starfolio-qa-cwd"
     work_dir.mkdir(parents=True, exist_ok=True)
+    sub_flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
     if engine.provider == "agy":
         cmd = [
@@ -187,8 +193,11 @@ def run_cli_prompt(
                 env=env,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=engine.timeout_seconds + 15,
                 check=False,
+                creationflags=sub_flags,
             )
         except subprocess.TimeoutExpired:
             return "", f"{engine.label} 响应超时（>{engine.timeout_seconds}s）"
@@ -243,8 +252,11 @@ def run_cli_prompt(
                 env=env,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=engine.timeout_seconds + 15,
                 check=False,
+                creationflags=sub_flags,
             )
             txt = out_path.read_text(encoding="utf-8", errors="replace").strip() if out_path.exists() else ""
             if txt:
@@ -286,8 +298,11 @@ def run_cli_prompt(
                 env=env,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=engine.timeout_seconds + 15,
                 check=False,
+                creationflags=sub_flags,
             )
         except subprocess.TimeoutExpired:
             return "", f"Claude Code 响应超时（>{engine.timeout_seconds}s）"

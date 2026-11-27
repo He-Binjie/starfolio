@@ -9,6 +9,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import { api, QuickJumpResponse } from '../api';
+import { modKeyLabel } from '../platform';
 
 export type NavTab = 'workspace' | 'projects' | 'timeline' | 'health';
 
@@ -199,7 +200,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         <div className="cmdk-footer">
           <span>↑↓ 选择</span>
           <span>↵ 打开</span>
-          <span>⌘K 随时呼出</span>
+          <span>{modKeyLabel()}K 随时呼出</span>
         </div>
       </div>
     </Modal>

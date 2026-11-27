@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -484,8 +485,11 @@ def get_document_detail(cfg: AppConfig, source_id: str, rel_path: str) -> dict[s
                 ],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=8,
                 check=False,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
             for ln in proc.stdout.splitlines():
                 cols = ln.split("|", 3)

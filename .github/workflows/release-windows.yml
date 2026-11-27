@@ -1,0 +1,223 @@
+name: Build Windows Desktop App
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "GitHub Release tag to publish Windows assets to (leave empty to auto-use v1.8.0)"
+        required: false
+        default: "v1.8.0"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Build React frontend
+        working-directory: frontend
+        shell: pwsh
+        run: |
+          pnpm install
+          pnpm build
+
+      - name: Install Python backend & Windows packaging dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r windows-app/requirements-win.txt
+
+      - name: Pre-download clean offline BGE Chinese embedding model
+        shell: pwsh
+        run: |
+          python -c @"
+          import os, shutil
+          from pathlib import Path
+          from fastembed import TextEmbedding
+
+          raw_cache = Path('dist/raw-models')
+          out_root = Path('dist/win-models')
+          raw_cache.mkdir(parents=True, exist_ok=True)
+          out_root.mkdir(parents=True, exist_ok=True)
+          os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
+          _ = TextEmbedding(model_name='BAAI/bge-small-zh-v1.5', cache_dir=str(raw_cache))
+
+          for mdir in raw_cache.glob('models--*'):
+              if not mdir.is_dir():
+                  continue
+              out_m = out_root / mdir.name
+              out_m.mkdir(parents=True, exist_ok=True)
+              for sub in ('refs', 'trees'):
+                  if (mdir / sub).exists():
+                      shutil.copytree(mdir / sub, out_m / sub, dirs_exist_ok=True)
+              for f in mdir.iterdir():
+                  if f.is_file():
+                      shutil.copy2(f, out_m / f.name)
+              snaps = mdir / 'snapshots'
+              if snaps.exists():
+                  for rev in snaps.iterdir():
+                      if not rev.is_dir():
+                          continue
+                      out_rev = out_m / 'snapshots' / rev.name
+                      out_rev.mkdir(parents=True, exist_ok=True)
+                      for item in rev.iterdir():
+                          real_src = item.resolve()
+                          if real_src.is_file():
+                              shutil.copy2(real_src, out_rev / item.name)
+          print('Prepared clean offline BGE model at', out_root)
+          "@
+
+      - name: Generate Windows multi-res .ico
+        shell: pwsh
+        run: python windows-app/make_ico.py
+
+      - name: Package Starfolio.exe (PyInstaller --onedir --windowed)
+        shell: pwsh
+        run: |
+          pyinstaller `
+            --onedir `
+            --windowed `
+            --noconfirm `
+            --clean `
+            --name Starfolio `
+            --icon windows-app/starfolio.ico `
+            --distpath dist/win-app `
+            --workpath dist/pyi-win-work `
+            --specpath dist/pyi-win-work `
+            --paths backend `
+            --add-data "frontend/dist;frontend-dist" `
+            --add-data "dist/win-models;models" `
+            --add-data "macos-app/sample-kb;sample-kb" `
+            --hidden-import uvicorn.logging `
+            --hidden-import uvicorn.loops `
+            --hidden-import uvicorn.loops.auto `
+            --hidden-import uvicorn.protocols `
+            --hidden-import uvicorn.protocols.http `
+            --hidden-import uvicorn.protocols.http.auto `
+            --hidden-import uvicorn.protocols.http.h11_impl `
+            --hidden-import uvicorn.protocols.websockets `
+            --hidden-import uvicorn.protocols.websockets.auto `
+            --hidden-import uvicorn.lifespan `
+            --hidden-import uvicorn.lifespan.on `
+            --hidden-import fastembed `
+            --hidden-import onnxruntime `
+            --hidden-import tokenizers `
+            --hidden-import huggingface_hub `
+            --hidden-import pymupdf `
+            --hidden-import docx `
+            --hidden-import openpyxl `
+            --hidden-import watchdog.observers.read_directory_changes `
+            --hidden-import httpx `
+            --hidden-import yaml `
+            --hidden-import webview `
+            --collect-all fastembed `
+            --collect-all onnxruntime `
+            --collect-all tokenizers `
+            --collect-all webview `
+            --collect-all pythonnet `
+            --collect-all clr_loader `
+            windows-app/starfolio_win.py
+
+      - name: Run clean-room E2E smoke test on compiled Starfolio.exe
+        shell: pwsh
+        run: |
+          $logFile = Join-Path $env:TEMP "starfolio-smoke.log"
+          $p = Start-Process -FilePath "dist/win-app/Starfolio/Starfolio.exe" `
+            -ArgumentList "--smoke-test" `
+            -RedirectStandardOutput $logFile `
+            -RedirectStandardError "$logFile.err" `
+            -Wait -PassThru
+          if (Test-Path $logFile) { Get-Content $logFile }
+          if (Test-Path "$logFile.err") { Get-Content "$logFile.err" }
+          if ($p.ExitCode -ne 0) {
+            throw "Starfolio.exe --smoke-test failed with exit code $($p.ExitCode)"
+          }
+
+      - name: Package Portable ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist/win-app/Starfolio" -DestinationPath "dist/Starfolio-Windows-x64-v1.8-Portable.zip" -CompressionLevel Optimal
+
+      - name: Build Inno Setup Installer (.exe)
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = (Get-Command iscc).Source
+          }
+          & $iscc windows-app/installer.iss
+          Get-ChildItem dist -Filter "Starfolio-Windows-*" | Format-Table Name, Length
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: starfolio-windows-x64-v1.8
+          path: |
+            dist/Starfolio-Windows-x64-v1.8-Setup.exe
+            dist/Starfolio-Windows-x64-v1.8-Portable.zip
+
+      - name: Publish to GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ github.event.inputs.release_tag }}"
+          if (-not $tag) {
+            if ("${{ github.ref_type }}" -eq "tag") {
+              $tag = "${{ github.ref_name }}"
+            } else {
+              $tag = "v1.8.0"
+            }
+          }
+          $notesFile = Join-Path $env:TEMP "release-notes.md"
+          @'
+          纯本地只读知识库工作台 · 0-Token 离线检索与跨文件分析 · BYOL 自带模型问答。
+
+          ### 下载说明
+          - **Windows 10/11 (x64)**：
+            - 推荐下载 `Starfolio-Windows-x64-v1.8-Setup.exe`（无需管理员权限，一键安装并创建桌面快捷方式）
+            - 或下载免安装便携版 `Starfolio-Windows-x64-v1.8-Portable.zip`（解压后双击 `Starfolio.exe` 即可运行）
+          - **macOS (Apple Silicon 14+)**：下载 `.dmg` 后拖入 Applications 即可。
+
+          > 首次启动可一键载入内置示例知识库（10 秒体验离线混合检索、跨文件对照、2D 星图、文档血缘与口径冲突筛查）；不配置 API Key 即可使用 80% 离线核心能力。
+          '@ | Set-Content -Path $notesFile -Encoding UTF8
+
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag `
+              dist/Starfolio-Windows-x64-v1.8-Setup.exe `
+              dist/Starfolio-Windows-x64-v1.8-Portable.zip `
+              --title "星海拾卷 Starfolio $tag (macOS & Windows)" `
+              --notes-file $notesFile
+          } else {
+            gh release upload $tag `
+              dist/Starfolio-Windows-x64-v1.8-Setup.exe `
+              dist/Starfolio-Windows-x64-v1.8-Portable.zip `
+              --clobber
+          }

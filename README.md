@@ -51,7 +51,7 @@
 - **Windows 10 / 11 (x64)**：
   - **安装版（推荐）**：`Starfolio-Windows-x64-v1.8-Setup.exe`（默认安装到用户目录，无需管理员权限）
   - **便携版**：`Starfolio-Windows-x64-v1.8-Portable.zip`（解压后双击 `Starfolio.exe` 直接运行）
-- **macOS (Apple Silicon 14+)**：`星海拾卷-AppleSilicon-v1.8.dmg`（拖入 Applications 即可）
+- **macOS (Apple Silicon 14+)**：`Starfolio-macOS-AppleSilicon-v1.8.dmg`（拖入 Applications 即可）
 
 > Windows 桌面版基于 Windows 10/11 系统自带的 Edge WebView2（`pywebview`），无需 Electron 庞大运行时，支持原生多选文件/文件夹弹窗、资源管理器拖拽接入与本地只读索引。
 

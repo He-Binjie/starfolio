@@ -1,0 +1,85 @@
+name: Build macOS Desktop App
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "GitHub Release tag to publish macOS DMG to (default: v1.8.0)"
+        required: false
+        default: "v1.8.0"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Python venv & packaging dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/pip install -r backend/requirements.txt pyinstaller
+
+      - name: Pre-download clean offline BGE Chinese embedding model
+        run: .venv/bin/python windows-app/prepare_models.py /tmp/raw-models data/models
+
+      - name: Build Apple Silicon .app & .dmg
+        run: |
+          bash macos-app/build-standalone.sh
+          mv "dist/星海拾卷-AppleSilicon-v1.8.dmg" "dist/Starfolio-macOS-AppleSilicon-v1.8.dmg"
+          ls -lh "dist/Starfolio-macOS-AppleSilicon-v1.8.dmg"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: starfolio-macos-arm64-v1.8
+          path: dist/Starfolio-macOS-AppleSilicon-v1.8.dmg
+
+      - name: Publish macOS DMG to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            if [ "${{ github.ref_type }}" = "tag" ]; then
+              TAG="${{ github.ref_name }}"
+            else
+              TAG="v1.8.0"
+            fi
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "dist/Starfolio-macOS-AppleSilicon-v1.8.dmg" --clobber
+          else
+            gh release create "$TAG" "dist/Starfolio-macOS-AppleSilicon-v1.8.dmg" \
+              --title "星海拾卷 Starfolio $TAG (macOS & Windows)" \
+              --notes "星海拾卷 Starfolio $TAG 桌面安装包（macOS Apple Silicon + Windows x64）。"
+          fi
